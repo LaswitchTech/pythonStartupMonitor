@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/env python3
 
 import smtplib
 import socket
@@ -14,15 +14,144 @@ import datetime
 import time
 from email.utils import formatdate
 
-# Function to load the configuration file
-def load_config(config_file='config.cfg'):
+# Default configuration
+default_config = {
+    "smtp_host": "smtp.example.com",
+    "smtp_port": 587,
+    "smtp_username": "user@example.com",
+    "smtp_password": "",
+    "recipient": "alert@example.com"
+}
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+script_name = sys.argv[0]
+venv_path = os.path.join(script_dir, ".env/bin/activate")
+config_file = os.path.join(script_dir, "config.cfg")
+service_name = "pi_startup_info"
+
+def is_service_installed():
+    result = subprocess.run(['systemctl', 'list-units', '--type=service', '--all'], stdout=subprocess.PIPE)
+    return f'{service_name}.service' in result.stdout.decode()
+
+def load_config():
     if os.path.exists(config_file):
-        with open(config_file, 'r') as file:
-            config = json.load(file)
-        return config
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+            for key in default_config:
+                if key not in config:
+                    config[key] = default_config[key]
+            return config
     else:
-        print(f"Configuration file {config_file} not found.")
-        return None
+        return default_config
+
+def save_config(config):
+    with open(config_file, 'w') as f:
+        json.dump(config, f, indent=4)
+    if args.verbose:
+        print("Configuration saved.")
+
+def configure():
+    config = load_config()
+    config['smtp_host'] = input(f"SMTP Server (current: {config['smtp_host']}): ") or config['smtp_host']
+    config['smtp_port'] = int(input(f"SMTP Port (current: {config['smtp_port']}): ") or config['smtp_port'])
+    config['smtp_username'] = input(f"SMTP Username (current: {config['smtp_username']}): ") or config['smtp_username']
+    config['smtp_password'] = input("SMTP Password: ") or config['smtp_password']
+    config['recipient'] = input(f"Recipient (current: {config['recipient']}): ") or config['recipient']
+    save_config(config)
+    if args.verbose:
+        print("Configuration saved.")
+
+def log_error(message):
+    with open(os.path.join(script_dir, 'error.log'), 'a') as f:
+        f.write(f"{datetime.datetime.now()} - {message}\n")
+
+# Function to send an email
+def send_email(subject, body, config):
+    msg = MIMEMultipart()
+    msg['From'] = config['smtp_username']
+    msg['To'] = config['recipient']
+    msg['Subject'] = subject
+    msg['Date'] = formatdate(localtime=True)  # Adding Date header
+
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP(config['smtp_host'], config['smtp_port'])
+        server.starttls()
+        server.login(config['smtp_username'], config['smtp_password'])
+        text = msg.as_string()
+        server.sendmail(config['smtp_username'], config['recipient'], text)
+        server.quit()
+        if args.verbose:
+            print("Email sent successfully!")
+    except Exception as e:
+        log_error(f"Failed to send email: {e}")
+        if args.verbose:
+            print(f"Failed to send email: {e}")
+
+# Function to install the script as a systemd service
+def create_service():
+    service_content = f"""
+    [Unit]
+    Description=Send Raspberry Pi Startup Information
+    After=network.target
+
+    [Service]
+    Type=simple
+    WorkingDirectory={script_dir}
+    ExecStart=/usr/bin/python3 {script_dir}/monitor.py
+
+    [Install]
+    WantedBy=multi-user.target
+    """
+    service_file_path = f'/etc/systemd/system/{service_name}.service'
+
+    try:
+        # Write the service file using sudo
+        with open(f'/tmp/{service_name}.service', 'w') as service_file:
+            service_file.write(service_content)
+
+        subprocess.run(['sudo', 'mv', f'/tmp/{service_name}.service', service_file_path], check=True)
+        subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
+        subprocess.run(['sudo', 'systemctl', 'enable', f'{service_name}.service'], check=True)
+        subprocess.run(['sudo', 'systemctl', 'start', f'{service_name}.service'], check=True)
+        if args.verbose:
+            print("Service installed, enabled and started.")
+    except Exception as e:
+        log_error(f"Failed to install service: {e}")
+        if args.verbose:
+            print(f"Failed to install service: {e}")
+        sys.exit(1)
+
+def remove_service():
+    if is_service_installed():
+        os.system(f'sudo systemctl stop {service_name}.service')
+        os.system(f'sudo systemctl disable {service_name}.service')
+        os.system(f'sudo rm /etc/systemd/system/{service_name}.service')
+        os.system('sudo systemctl daemon-reload')
+        if args.verbose:
+            print("Service removed.")
+    else:
+        if args.verbose:
+            print(f"Service '{service_name}.service' is not installed.")
+
+def start_service():
+    if is_service_installed():
+        subprocess.run(['sudo', 'systemctl', 'start', f'{service_name}.service'])
+        if args.verbose:
+            print("Service started.")
+    else:
+        if args.verbose:
+            print(f"Service '{service_name}.service' is not installed.")
+
+def stop_service():
+    if is_service_installed():
+        subprocess.run(['sudo', 'systemctl', 'stop', f'{service_name}.service'])
+        if args.verbose:
+            print("Service stopped.")
+    else:
+        if args.verbose:
+            print(f"Service '{service_name}.service' is not installed.")
 
 # Function to check network connectivity
 def wait_for_network(timeout=60, interval=5):
@@ -31,12 +160,16 @@ def wait_for_network(timeout=60, interval=5):
         try:
             # Attempt to connect to Google's DNS server
             socket.create_connection(("8.8.8.8", 53))
-            print("Network connected.")
+            if args.verbose:
+                print("Network connected.")
             return True
         except OSError:
-            print("Network not connected, waiting...")
+            if args.verbose:
+                print("Network not connected, waiting...")
             if time.time() - start_time >= timeout:
-                print("Network connection timed out.")
+                log_error("Network connection timed out.")
+                if args.verbose:
+                    print("Network connection timed out.")
                 return False
             time.sleep(interval)
 
@@ -68,120 +201,60 @@ def get_system_info():
     Uptime: {uptime_str}
     """
 
-# Function to send an email
-def send_email(subject, body, config):
-    msg = MIMEMultipart()
-    msg['From'] = config['smtp_username']
-    msg['To'] = config['recipient']
-    msg['Subject'] = subject
-    msg['Date'] = formatdate(localtime=True)  # Adding Date header
+if __name__ == "__main__":
 
-    msg.attach(MIMEText(body, 'plain'))
+    parser = argparse.ArgumentParser(
+        description="Raspberry Pi Startup Info Script",
+        epilog=f"Examples:\n"
+               f"  python3 {script_name} --verbose\n"
+               f"  python3 {script_name} --console\n"
+               f"  python3 {script_name} --console --verbose\n"
+               f"  python3 {script_name}\n\n"
+               "The script allows you to:\n"
+               "- Display the information without sending the notification --console\n"
+               "- Print the readings to the console with --verbose\n"
+               "- Install the script as a service with --install\n"
+               "- Uninstall the service with --uninstall\n"
+               "- start the service with --start\n"
+               "- stop the service with --stop\n"
+               "- Configure the script with --configure",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
 
-    try:
-        server = smtplib.SMTP(config['smtp_host'], config['smtp_port'])
-        server.starttls()
-        server.login(config['smtp_username'], config['smtp_password'])
-        text = msg.as_string()
-        server.sendmail(config['smtp_username'], config['recipient'], text)
-        server.quit()
-        print("Email sent successfully!")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
-
-# Function to install the script as a systemd service
-def install_service():
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    service_content = f"""
-    [Unit]
-    Description=Send Raspberry Pi Startup Information
-    After=network.target
-
-    [Service]
-    WorkingDirectory={script_directory}
-    ExecStart=/usr/bin/python3 {script_directory}/monitor.py
-
-    [Install]
-    WantedBy=multi-user.target
-    """
-    service_file_path = '/etc/systemd/system/pi_startup_info.service'
-
-    try:
-        # Write the service file using sudo
-        with open('/tmp/pi_startup_info.service', 'w') as service_file:
-            service_file.write(service_content)
-
-        subprocess.run(['sudo', 'mv', '/tmp/pi_startup_info.service', service_file_path], check=True)
-        subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
-        subprocess.run(['sudo', 'systemctl', 'enable', 'pi_startup_info.service'], check=True)
-        print("Service installed and enabled.")
-    except Exception as e:
-        print(f"Failed to install service: {e}")
-        sys.exit(1)
-
-# Function to uninstall the systemd service
-def uninstall_service():
-    subprocess.run(['sudo', 'systemctl', 'disable', 'pi_startup_info.service'])
-    subprocess.run(['sudo', 'rm', '/etc/systemd/system/pi_startup_info.service'])
-    subprocess.run(['sudo', 'systemctl', 'daemon-reload'])
-    print("Service uninstalled.")
-
-# Function to configure the script settings
-def configure_settings():
-    config_file = 'config.cfg'
-    smtp_host = input("Please specify the host to be used for the SMTP Connection: ")
-    smtp_port = input("Please specify the port to be used for the SMTP Connection: ")
-    smtp_username = input("Please specify the username to be used for the SMTP Connection: ")
-    smtp_password = input("Please specify the password to be used for the SMTP Connection: ")
-    recipient = input("Please specify the recipient of the notifications: ")
-
-    config = {
-        "smtp_host": smtp_host,
-        "smtp_port": smtp_port,
-        "smtp_username": smtp_username,
-        "smtp_password": smtp_password,
-        "recipient": recipient
-    }
-
-    with open(config_file, 'w') as file:
-        json.dump(config, file, indent=4)
-
-    print(f"Configuration saved to {config_file}.")
-
-# Main function
-def main():
-    parser = argparse.ArgumentParser(description="Raspberry Pi Startup Info Script")
-    parser.add_argument('--console', action='store_true', help="Only display the information without sending the notification.")
-    parser.add_argument('--verbose', action='store_true', help="Echo the information to the console.")
-    parser.add_argument('--install', action='store_true', help="Install the script as a systemd service.")
-    parser.add_argument('--uninstall', action='store_true', help="Uninstall the script as a systemd service.")
-    parser.add_argument('--configure', action='store_true', help="Configure the script settings.")
+    parser.add_argument("--console", action="store_true", help="Only display the information without sending the notification.")
+    parser.add_argument("--verbose", action="store_true", help="Echo the sensor readings to the console.")
+    parser.add_argument("--install", action="store_true", help="Install the script as a systemd service.")
+    parser.add_argument("--uninstall", action="store_true", help="Uninstall the script as a systemd service.")
+    parser.add_argument("--start", action="store_true", help="Start the service if installed.")
+    parser.add_argument("--stop", action="store_true", help="Stop the service if installed.")
+    parser.add_argument("--configure", action="store_true", help="Configure the script settings.")
 
     args = parser.parse_args()
 
-    if args.install:
-        install_service()
-    elif args.uninstall:
-        uninstall_service()
-    elif args.configure:
-        configure_settings()
+    if args.configure:
+        configure()
     else:
-        if not wait_for_network():
-            print("Network is not available. Exiting.")
-            return
-
         config = load_config()
-        if not config:
-            print("Configuration file not found. Please run with --configure to set up.")
-            return
 
-        system_info = get_system_info()
+        if args.install:
+            create_service()
+        elif args.uninstall:
+            remove_service()
+        elif args.start:
+            start_service()
+        elif args.stop:
+            stop_service()
+        else:
+            try:
+                if not wait_for_network():
+                    print("Network is not available. Exiting.")
 
-        if args.verbose or args.console:
-            print(system_info)
+                system_info = get_system_info()
+                
+                print(system_info)
 
-        if not args.console:
-            send_email("Raspberry Pi Startup Info", system_info, config)
-
-if __name__ == "__main__":
-    main()
+                if not args.console:
+                    send_email("Raspberry Pi Startup Info", system_info, config)
+            except KeyboardInterrupt:
+                if args.verbose:
+                    print("\nStopping...")

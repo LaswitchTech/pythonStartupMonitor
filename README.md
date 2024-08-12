@@ -24,6 +24,7 @@ Using Bash:
 ```sh
 git clone https://github.com/LaswitchTech/pythonStartupMonitor
 cd pythonStartupMonitor
+chmod +x *.{sh,py}
 ./install.sh
 ```
 
