@@ -201,21 +201,21 @@ if __name__ == "__main__":
         else:
             try:
                 # Function to check network connectivity
-                def wait_for_network(timeout=60, interval=5):
+                def wait_for_network(timeout=60, interval=5, verbose):
                     start_time = time.time()
                     while True:
                         try:
                             # Attempt to connect to Google's DNS server
                             socket.create_connection(("8.8.8.8", 53))
-                            if args.verbose
+                            if verbose
                                 print("Network connected.")
                             return True
                         except OSError:
-                            if args.verbose
+                            if verbose
                                 print("Network not connected, waiting...")
                             if time.time() - start_time >= timeout:
                                 log_error("Network connection timed out.")
-                                if args.verbose
+                                if verbose
                                     print("Network connection timed out.")
                                 return False
                             time.sleep(interval)
@@ -248,7 +248,7 @@ if __name__ == "__main__":
                     Uptime: {uptime_str}
                     """
 
-                if not wait_for_network():
+                if not wait_for_network(60, 5, args.verbose):
                     print("Network is not available. Exiting.")
                     return
 
