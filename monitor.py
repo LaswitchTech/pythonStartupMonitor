@@ -160,12 +160,10 @@ def wait_for_network(timeout=60, interval=5):
         try:
             # Attempt to connect to Google's DNS server
             socket.create_connection(("8.8.8.8", 53))
-            if args.verbose
-                print("Network connected.")
+            print("Network connected.")
             return True
         except OSError:
-            if args.verbose
-                print("Network not connected, waiting...")
+            print("Network not connected, waiting...")
             if time.time() - start_time >= timeout:
                 log_error("Network connection timed out.")
                 print("Network connection timed out.")
