@@ -160,13 +160,16 @@ def wait_for_network(timeout=60, interval=5):
         try:
             # Attempt to connect to Google's DNS server
             socket.create_connection(("8.8.8.8", 53))
-            print("Network connected.")
+            if args.verbose:
+                print("Network connected.")
             return True
         except OSError:
-            print("Network not connected, waiting...")
+            if args.verbose:
+                print("Network not connected, waiting...")
             if time.time() - start_time >= timeout:
                 log_error("Network connection timed out.")
-                print("Network connection timed out.")
+                if args.verbose:
+                    print("Network connection timed out.")
                 return False
             time.sleep(interval)
 
@@ -222,11 +225,9 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", action="store_true", help="Echo the sensor readings to the console.")
     parser.add_argument("--install", action="store_true", help="Install the script as a systemd service.")
     parser.add_argument("--uninstall", action="store_true", help="Uninstall the script as a systemd service.")
-    parser.add_argument("--configure", action="store_true", help="Configure the script settings.")
     parser.add_argument("--start", action="store_true", help="Start the service if installed.")
     parser.add_argument("--stop", action="store_true", help="Stop the service if installed.")
-    parser.add_argument("--add", metavar="HOST", help="Add a host to the monitoring list.")
-    parser.add_argument("--remove", metavar="HOST", help="Remove a host from the monitoring list.")
+    parser.add_argument("--configure", action="store_true", help="Configure the script settings.")
 
     args = parser.parse_args()
 
@@ -247,7 +248,6 @@ if __name__ == "__main__":
             try:
                 if not wait_for_network():
                     print("Network is not available. Exiting.")
-                    # return
 
                 system_info = get_system_info()
 
