@@ -1,10 +1,10 @@
 <p align="center"><img src="dist/img/logo.png" /></p>
 
 # Python Startup Monitor
-![License](https://img.shields.io/github/license/LouisOuellet/python-startup-monitor?style=for-the-badge)
-![GitHub repo size](https://img.shields.io/github/repo-size/LouisOuellet/python-startup-monitor?style=for-the-badge&logo=github)
-![GitHub top language](https://img.shields.io/github/languages/top/LouisOuellet/python-startup-monitor?style=for-the-badge)
-![Version](https://img.shields.io/github/v/release/LouisOuellet/python-startup-monitor?label=Version&style=for-the-badge)
+![License](https://img.shields.io/github/license/LaswitchTech/pythonStartupMonitor?style=for-the-badge)
+![GitHub repo size](https://img.shields.io/github/repo-size/LaswitchTech/pythonStartupMonitor?style=for-the-badge&logo=github)
+![GitHub top language](https://img.shields.io/github/languages/top/LaswitchTech/pythonStartupMonitor?style=for-the-badge)
+![Version](https://img.shields.io/github/v/release/LaswitchTech/pythonStartupMonitor?label=Version&style=for-the-badge)
 
 ## Description
 This python application is used to send an email notification whenever a UNIX system is started/restarted. The email notification includes 3 information. The system's IP, Hostname and Uptime.
@@ -22,8 +22,8 @@ Please disclose any vulnerabilities found responsibly – report security issues
 ## Installation
 Using Bash:
 ```sh
-git clone https://github.com/LouisOuellet/python-startup-monitor
-cd python-startup-monitor
+git clone https://github.com/LaswitchTech/pythonStartupMonitor
+cd pythonStartupMonitor
 ./install.sh
 ```
 
