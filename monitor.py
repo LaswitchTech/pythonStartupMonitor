@@ -250,9 +250,8 @@ if __name__ == "__main__":
                     print("Network is not available. Exiting.")
 
                 system_info = get_system_info()
-
-                if args.verbose:
-                    print(system_info)
+                
+                print(system_info)
 
                 if not args.console:
                     send_email("Raspberry Pi Startup Info", system_info, config)

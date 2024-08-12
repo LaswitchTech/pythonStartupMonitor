@@ -3,19 +3,19 @@ To use the script, the virtual environment must be loaded. A ``run.sh`` bash wra
 ## Help Message
 ```
 $ ./run.sh --help
-usage: monitor.py [-h] [--console] [--verbose] [--install] [--uninstall] [--configure] [--start] [--stop] [--add HOST] [--remove HOST]
+usage: monitor.py [-h] [--console] [--verbose] [--install] [--uninstall] [--start] [--stop] [--configure]
 
 Raspberry Pi Startup Info Script
 
 options:
-  -h, --help     show this help message and exit
-  --console      Only display the information without sending the notification.
-  --verbose      Echo the sensor readings to the console.
-  --install      Install the script as a systemd service.
-  --uninstall    Uninstall the script as a systemd service.
-  --configure    Configure the script settings.
-  --start        Start the service if installed.
-  --stop         Stop the service if installed.
+  -h, --help   show this help message and exit
+  --console    Only display the information without sending the notification.
+  --verbose    Echo the sensor readings to the console.
+  --install    Install the script as a systemd service.
+  --uninstall  Uninstall the script as a systemd service.
+  --start      Start the service if installed.
+  --stop       Stop the service if installed.
+  --configure  Configure the script settings.
 
 Examples:
   python3 ./monitor.py --verbose
