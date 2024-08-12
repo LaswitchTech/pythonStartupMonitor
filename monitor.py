@@ -247,7 +247,7 @@ if __name__ == "__main__":
             try:
                 if not wait_for_network():
                     print("Network is not available. Exiting.")
-                    return
+                    # return
 
                 system_info = get_system_info()
 
