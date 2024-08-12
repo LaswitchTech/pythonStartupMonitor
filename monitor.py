@@ -168,8 +168,7 @@ def wait_for_network(timeout=60, interval=5):
                 print("Network not connected, waiting...")
             if time.time() - start_time >= timeout:
                 log_error("Network connection timed out.")
-                if args.verbose
-                    print("Network connection timed out.")
+                print("Network connection timed out.")
                 return False
             time.sleep(interval)
 
@@ -248,8 +247,7 @@ if __name__ == "__main__":
             stop_service()
         else:
             try:
-
-                if not wait_for_network(60, 5, args.verbose):
+                if not wait_for_network():
                     print("Network is not available. Exiting.")
                     return
 
