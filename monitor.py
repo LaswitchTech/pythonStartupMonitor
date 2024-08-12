@@ -92,15 +92,13 @@ def send_email(subject, body, config):
 def create_service():
     service_content = f"""
     [Unit]
-    Description=Network Latency Data Logger Service
+    Description=Send Raspberry Pi Startup Information
     After=network.target
 
     [Service]
     Type=simple
     WorkingDirectory={script_dir}
-    ExecStart=/bin/bash -c 'source {venv_path} && python3 {script_dir}/monitor.py'
-    Restart=on-failure
-    User={os.getlogin()}
+    ExecStart=/usr/bin/python3 {script_dir}/monitor.py
 
     [Install]
     WantedBy=multi-user.target
