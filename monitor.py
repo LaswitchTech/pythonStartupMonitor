@@ -152,54 +152,6 @@ def stop_service():
         if args.verbose:
             print(f"Service '{service_name}.service' is not installed.")
 
-# Function to check network connectivity
-def wait_for_network(timeout=60, interval=5):
-    start_time = time.time()
-    while True:
-        try:
-            # Attempt to connect to Google's DNS server
-            socket.create_connection(("8.8.8.8", 53))
-            if args.verbose
-                print("Network connected.")
-            return True
-        except OSError:
-            if args.verbose
-                print("Network not connected, waiting...")
-            if time.time() - start_time >= timeout:
-                log_error("Network connection timed out.")
-                if args.verbose
-                    print("Network connection timed out.")
-                return False
-            time.sleep(interval)
-
-# Function to get system information
-def get_system_info():
-    hostname = socket.gethostname()
-
-    # Getting the primary IP address
-    ip_address = None
-    for interface, addrs in psutil.net_if_addrs().items():
-        for addr in addrs:
-            if addr.family == socket.AF_INET and not addr.address.startswith("127."):
-                ip_address = addr.address
-                break
-        if ip_address:
-            break
-
-    if not ip_address:
-        ip_address = "Unavailable"
-
-    # Converting uptime to a human-readable format
-    uptime_seconds = psutil.boot_time()
-    uptime = datetime.datetime.now() - datetime.datetime.fromtimestamp(uptime_seconds)
-    uptime_str = str(uptime).split('.')[0]  # Removing microseconds
-
-    return f"""
-    Hostname: {hostname}
-    IP Address: {ip_address}
-    Uptime: {uptime_str}
-    """
-
 if __name__ == "__main__":
     script_name = sys.argv[0]
 
@@ -248,6 +200,54 @@ if __name__ == "__main__":
             stop_service()
         else:
             try:
+                # Function to check network connectivity
+                def wait_for_network(timeout=60, interval=5):
+                    start_time = time.time()
+                    while True:
+                        try:
+                            # Attempt to connect to Google's DNS server
+                            socket.create_connection(("8.8.8.8", 53))
+                            if args.verbose
+                                print("Network connected.")
+                            return True
+                        except OSError:
+                            if args.verbose
+                                print("Network not connected, waiting...")
+                            if time.time() - start_time >= timeout:
+                                log_error("Network connection timed out.")
+                                if args.verbose
+                                    print("Network connection timed out.")
+                                return False
+                            time.sleep(interval)
+
+                # Function to get system information
+                def get_system_info():
+                    hostname = socket.gethostname()
+
+                    # Getting the primary IP address
+                    ip_address = None
+                    for interface, addrs in psutil.net_if_addrs().items():
+                        for addr in addrs:
+                            if addr.family == socket.AF_INET and not addr.address.startswith("127."):
+                                ip_address = addr.address
+                                break
+                        if ip_address:
+                            break
+
+                    if not ip_address:
+                        ip_address = "Unavailable"
+
+                    # Converting uptime to a human-readable format
+                    uptime_seconds = psutil.boot_time()
+                    uptime = datetime.datetime.now() - datetime.datetime.fromtimestamp(uptime_seconds)
+                    uptime_str = str(uptime).split('.')[0]  # Removing microseconds
+
+                    return f"""
+                    Hostname: {hostname}
+                    IP Address: {ip_address}
+                    Uptime: {uptime_str}
+                    """
+
                 if not wait_for_network():
                     print("Network is not available. Exiting.")
                     return
